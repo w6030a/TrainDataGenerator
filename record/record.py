@@ -1,6 +1,6 @@
 class Record:
     
-    # P.S. all amounts normalized by dividing by init total chips
+    # P.S. all amounts normalized by dividing by init chips (without reload)
     
     ## table info
     # . round stage encoding [preflop, flop, river...]
@@ -25,8 +25,8 @@ class Record:
     # . poorest unfolded most aggressive(most raise) opponent's chips in hand
     # . poorest unfolded most defensive(most call) opponent's remaining chips (hand + reloads)
     
-    # . # of unfolded opponents
-    # . # of survive opponents
+    # . # of unfolded players
+    # . # of survive players
     # . # of all-in opponents
     # . # of raises / 
     # . # of bets
@@ -35,25 +35,35 @@ class Record:
     ## game info
     # . game stage encoding; # of rounds / # of initial players [early if < 1, mid if < 2, late if else]
     
-    def __init__(self, table_id, stage, total_bet, init_chips, max_reload):
-        # table info
-        self.table_id = table_id
-        self.stage = stage
-        
-        #TODO: normalize
-        self.totla_bet = total_bet
-        
-        #TODO: may want to combine these to total initChips for Chips bet % feautre
-        self.init_chips = init_chips
-        self.max_reload = max_reload
-        
-        # record owner info
-        #self.player = 
-        
-        # opponent info
-        self.num_of_unfolded_opponent = 0
-        self.players = []
-        
-    def addPlayer(self, player):
+    def __init__(self):
         pass
+        
+    def set_table_info(self, table_info):
+        self.table_id = table_info['tableNumber']
+        self.stage = table_info['roundName']
+        self.round_count = table_info['roundCount']
+        self.raise_count = table_info['raiseCount']
+        self.bet_count = table_info['betCount']
+        self.total_bet = table_info['totalBet']
+        self.init_chips = table_info['initChips']
+        self.max_reload_count = table_info['maxReloadCount']
+        self.board_card = table_info['board']
+        self.small_blind = table_info['smallBlind']
+        self.big_blind = table_info['bigBlind']
+        
+    def set_player_info(self, player_info):
+        self.player_info = player_info
+        
+    def set_action_info(self, action_info):
+        self.action = action_info['action']
+        self.player_name = action_info['playerName']
+        self.chips = action_info['chips']
+        
+        if 'amount' not in action_info:
+            self.amount = 0
+        else:
+            self.amount = action_info['amount']
+        
+    def get_table_id(self):
+        return self.table_id
         
