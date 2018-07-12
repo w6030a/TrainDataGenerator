@@ -3,15 +3,19 @@ class RecordWarehouse:
     record_bucket = {}
     
     @staticmethod
-    def append(record):
-        RecordWarehouse.record_bucket[record.get_table_id()] = record
-        print 'record appended for table {}'.format(record.get_table_id())
-        print 'keys in bucket {}'.format(RecordWarehouse.record_bucket.keys())
+    def append(key, record):
+        if key not in RecordWarehouse.record_bucket:
+            record_list = []
+            RecordWarehouse.record_bucket[key] = record_list
+        
+        RecordWarehouse.record_bucket[key].append(record)
+        
+        #print 'record appended for table {}'.format(key)
+        #print 'keys in bucket {}'.format(RecordWarehouse.record_bucket.keys())
     
     @staticmethod
-    def round_clear(record):
-        print 'record end event for table {}'.format(record.get_table_id())
-        #TODO: do calculation
-        #TODO: write log
-        del RecordWarehouse.record_bucket[record.get_table_id()]
-        print 'keys in bucket {}\n'.format(RecordWarehouse.record_bucket.keys())
+    def pop_records(key):
+        temp = RecordWarehouse.record_bucket[key];
+        del RecordWarehouse.record_bucket[key]
+        #print 'keys in bucket {}\n'.format(RecordWarehouse.record_bucket.keys())
+        return temp

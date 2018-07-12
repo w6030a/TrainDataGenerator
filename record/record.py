@@ -52,8 +52,19 @@ class Record:
         self.big_blind = table_info['bigBlind']
         
     def set_player_info(self, player_info):
-        self.player_info = player_info
-        
+        for player in player_info:
+            if self.player_name == player['playerName']:
+                self.chips = player['chips']
+                self.folded = player['folded']
+                self.allin = player['allIn']
+                self.cards = player['cards']
+                self.is_survive = player['isSurvive']
+                self.reload_count = player['reloadCount']
+                self.round_bet = player['roundBet']
+                self.bet = player['bet']
+                self.isOnline = player['isOnline']
+                self.isHuman = player['isHuman']
+
     def set_action_info(self, action_info):
         self.action = action_info['action']
         self.player_name = action_info['playerName']
@@ -66,4 +77,13 @@ class Record:
         
     def get_table_id(self):
         return self.table_id
+    
+    def get_player_info(self):
+        return self.player_info
+    
+    def get_player_name(self):
+        return self.player_name
+    
+    def set_reward(self, reward):
+        self.reward = reward
         
