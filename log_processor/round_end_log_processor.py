@@ -1,6 +1,8 @@
 from abstract_log_processor import AbstractLogProssor
 from record.record import Record
 from record.record_warehouse import RecordWarehouse
+from util.io_util import IOUtil
+from util.config import Config
 
 class RoundEndLogProcessor(AbstractLogProssor):
 
@@ -16,24 +18,35 @@ class RoundEndLogProcessor(AbstractLogProssor):
         round_end_record = Record()
         round_end_record.set_table_info(table_info)
         
-        ## calculate reward
-        rewards = self._get_rewards(player_info);
-        
-        ## append reward to records
-        record_list = RecordWarehouse.pop_records(round_end_record.get_table_id())
-        for record in record_list:
+        ## assign money won for the round to records
+        money_won = self._get_money_won(player_info);
+        record_history = RecordWarehouse.pop_records(round_end_record.get_table_id())
+        for record in record_history:
             player_name = record.get_player_name()
-            record.set_reward(rewards[player_name])
-            
-        ## write log
+            record.set_money_won(money_won[player_name])
         
-    def _get_rewards(self, player_info):
-        rewards = {}
+        ## write log from record
+        log = []
+        for record in record_history:
+            log.append(record.to_feature_string())
+        
+        IOUtil.write_file_line_by_line(Config.get_output_path(), log)
+        
+    def _get_money_won(self, player_info):
+        money_won = {}
         
         for player in player_info:
             player_name = player['playerName']
-            reward = player['winMoney']
-            rewards[player_name] = reward
+            winMoney = player['winMoney']
+            money_won[player_name] = winMoney
             
-        return rewards
+        return money_won
+    
+    def _calculate_reward(self, record):
+        money_won = record.get_money_won()
+        round_bet = record.get_round_bet()
+        bet = record.get_bet()
+        
+        reward = money_won - round_bet - bet
+        return reward
         

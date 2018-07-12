@@ -1,10 +1,15 @@
-
+#coding=utf-8
 
 class IOUtil(object):
 
     @staticmethod
     def write_file(path, content):
-        #TODO
+        pass
+    
+    @staticmethod
+    def write_file_line_by_line(path, content):
+        print "im supposed to write some lines"
+        #TODO: content is a list
         pass
     
     @staticmethod
@@ -12,5 +17,13 @@ class IOUtil(object):
         f = open(path, 'r') 
         data =  f.read()
         f.close()
+        
         return data
+        
+    @staticmethod
+    def read_file_line_by_line(path):
+        with open(path) as f:
+            lines = f.readlines()
+            
+        return lines
         
