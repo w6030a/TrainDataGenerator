@@ -77,6 +77,7 @@ class Record:
         features.extend(self._get_action_columns())
         features.append(self._is_small_blind())
         features.append(self._is_big_blind())
+        features.append(self._get_hand_score())
         
         ## table info
         features.extend(self._get_round_stage_columns())
@@ -149,6 +150,9 @@ class Record:
     
     def _is_big_blind(self):
         return 1 if self.player_name == self.big_blind['playerName'] else 0
+    
+    def _get_hand_socre(self):
+        card_info = self.cards
         
     ## table info
     def _get_round_stage_columns(self):

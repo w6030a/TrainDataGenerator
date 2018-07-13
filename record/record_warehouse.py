@@ -1,5 +1,4 @@
 class RecordWarehouse:
-#TODO: dictionary of list for records
     record_bucket = {}
     
     @staticmethod
