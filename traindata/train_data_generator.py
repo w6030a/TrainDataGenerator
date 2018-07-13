@@ -7,7 +7,7 @@ from util.io_util import IOUtil
 from util.config import Config
 
 def main(argv):
-    print 'argv = {}'.format(argv[1:])
+    #print 'argv = {}'.format(argv[1:])
     
     #TODO: arg 1 for input
     #TODO: arg 2 for output

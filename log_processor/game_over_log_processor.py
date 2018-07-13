@@ -6,6 +6,6 @@ class GameOverLogProcessor(AbstractLogProssor):
         self.log = log
         
     def process(self):
-        print '__game_over event'
+        #print '__game_over event'
         #TODO
         pass

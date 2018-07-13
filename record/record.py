@@ -1,3 +1,5 @@
+from __future__ import division
+
 class Record:
 
     def __init__(self):
@@ -16,7 +18,8 @@ class Record:
         self.small_blind = table_info['smallBlind']
         self.big_blind = table_info['bigBlind']
         
-    def set_player_info(self, player_info):
+    def set_player_info(self, player_name, player_info):
+        self.player_name = player_name
         self.player_info = player_info
         
         # set info for record owner
@@ -34,14 +37,10 @@ class Record:
                 self.isHuman = player['isHuman']
 
     def set_action_info(self, action_info):
-        self.action = action_info['action']
-        self.player_name = action_info['playerName']
-        self.chips = action_info['chips']
-        
-        if 'amount' not in action_info:
-            self.amount = 0
-        else:
-            self.amount = action_info['amount']
+        self.action_info = action_info
+    
+    def get_action_info(self):
+        return self.action_info
         
     def get_table_id(self):
         return self.table_id
@@ -64,6 +63,9 @@ class Record:
     def set_money_won(self, money_won):
         self.money_won = money_won
         
+    def set_action_history(self, action_history):
+        self.action_history = action_history
+        
     def to_feature_string(self):
         features = []
         
@@ -72,10 +74,12 @@ class Record:
         features.append(self._get_total_round_bet())
         features.append(self._get_current_bet())
         features.append(self._get_chips_remain())
-        features.append(self._get_action_columns())
-
+        features.extend(self._get_action_columns())
+        features.append(self._is_small_blind())
+        features.append(self._is_big_blind())
+        
         ## table info
-        features.append(self._get_round_stage_columns())
+        features.extend(self._get_round_stage_columns())
         features.append(self._get_bet_on_table())
         features.append(self._get_num_of_raises())
         features.append(self._get_num_of_bets())
@@ -83,13 +87,20 @@ class Record:
         features.append(self._get_big_blind())
                         
         ## opponent info 
+        features.append(self._get_most_raise_count_from_one_opponent())
+        features.append(self._get_most_amount_raised_from_opponent())
+        features.append(self._get_most_portion_raised_from_opponent())
+        features.append(self._get_most_amount_bet_from_opponent())
+        features.append(self._get_most_portion_bet_from_opponent())
+        features.extend(self._get_unfolded_opponent_raise_count_histogram_column())
+        features.extend(self._get_unfolded_opponent_call_count_histogram_column())
         features.append(self._get_num_of_unfolded_opponent())
         features.append(self._get_num_of_allin_opponent())
         features.append(self._get_num_of_survive_opponent())
         features.append(self._get_num_of_online_opponent())
         
         ## game info
-        features.append(self._get_game_stage_column())
+        features.extend(self._get_game_stage_column())
 
         ## reward
         features.append(self._get_reward())
@@ -115,7 +126,7 @@ class Record:
         action_columns = [0, 0, 0, 0, 0, 0]
         
         #call, bet, raise, allin, fold
-        action = self.action
+        action = self.action_info['action']
         if action == 'call':
             action_columns[0] = 1 
         elif action == 'bet':
@@ -133,6 +144,12 @@ class Record:
         
         return action_columns
     
+    def _is_small_blind(self):
+        return 1 if self.player_name == self.small_blind['playerName'] else 0
+    
+    def _is_big_blind(self):
+        return 1 if self.player_name == self.big_blind['playerName'] else 0
+        
     ## table info
     def _get_round_stage_columns(self):
         round_stage_columns = [0, 0, 0, 0, 0]
@@ -153,7 +170,7 @@ class Record:
         return round_stage_columns
     
     def _get_bet_on_table(self):
-        return self.total_bet
+        return self._normalize(self.total_bet)
     
     def _get_num_of_raises(self):
         return self.raise_count
@@ -168,6 +185,147 @@ class Record:
         return self._normalize(self.big_blind['amount'])
     
     ## opponent info
+    def _get_most_raise_count_from_one_opponent(self):
+        opponent_raise_count = {}
+        
+        for action in self.action_history:
+            if self.player_name == action['playerName']:
+                continue
+            
+            if action['action'] != 'raise':
+                continue
+            
+            if action['playerName'] not in opponent_raise_count:
+                opponent_raise_count[action['playerName']] = 1
+            else:
+                opponent_raise_count[action['playerName']] += 1
+        
+        if len(opponent_raise_count) == 0:
+            return 0
+        
+        return opponent_raise_count[max(opponent_raise_count, key=opponent_raise_count.get)]
+        
+    def _get_most_amount_raised_from_opponent(self):
+        max_raised = 0
+        
+        for action in self.action_history:
+            if self.player_name == action['playerName']:
+                continue
+            
+            if action['action'] == 'raise' and action['amount'] > max_raised:
+                max_raised = action['amount']
+                
+        return self._normalize(max_raised)
+    
+    def _get_most_portion_raised_from_opponent(self):
+        max_raised = 0
+        max_raised_player_chips_in_hand = 0
+        
+        for action in self.action_history:
+            if self.player_name == action['playerName']:
+                continue
+            
+            if action['action'] == 'raise' and action['amount'] > max_raised:
+                max_raised = action['amount']
+                max_raised_player_chips_in_hand = action['chips']
+               
+        
+        if max_raised_player_chips_in_hand == 0:
+            return 1
+        
+        return max_raised / (max_raised + max_raised_player_chips_in_hand)
+        
+    def _get_most_amount_bet_from_opponent(self):
+        max_round_bet = 0
+        
+        for player in self.player_info:
+            if self.player_name == player['playerName']:
+                continue
+            
+            if player['roundBet'] > max_round_bet:
+                max_round_bet = player['roundBet']
+                
+        return self._normalize(max_round_bet)
+    
+    def _get_most_portion_bet_from_opponent(self):
+        max_round_bet = 0
+        max_round_bet_player_chips_in_hand = 0
+        
+        for player in self.player_info:
+            if self.player_name == player['playerName']:
+                continue
+            
+            if player['roundBet'] > max_round_bet:
+                max_round_bet = player['roundBet']
+                max_round_bet_player_chips_in_hand = player['chips']
+                
+        if max_round_bet_player_chips_in_hand == 0:
+            return 1
+        
+        return max_round_bet / (max_round_bet + max_round_bet_player_chips_in_hand)
+    
+    def _get_unfolded_opponent_raise_count_histogram_column(self):
+        opponent_raise_count_histogram = [0, 0, 0, 0, 0]
+        opponent_raise_count = {}
+        
+        # fill dictionary with opponent name and raise count
+        for action in self.action_history:
+            if self.player_name == action['playerName']:
+                continue
+            
+            if action['action'] != 'raise':
+                continue
+            
+            if action['playerName'] not in opponent_raise_count:
+                opponent_raise_count[action['playerName']] = 1
+            else:
+                opponent_raise_count[action['playerName']] += 1
+        
+        # increment histogram with raise counts
+        for value in opponent_raise_count.itervalues():
+            if value == 1:
+                opponent_raise_count_histogram[0] += 1
+            elif value == 2:
+                opponent_raise_count_histogram[1] += 1
+            elif value == 3:
+                opponent_raise_count_histogram[2] += 1
+            elif value == 4:
+                opponent_raise_count_histogram[3] += 1
+            else:
+                opponent_raise_count_histogram[4] += 1
+                
+        return opponent_raise_count_histogram
+    
+    def _get_unfolded_opponent_call_count_histogram_column(self):
+        opponent_call_count_histogram = [0, 0, 0, 0]
+        opponent_call_count = {}
+        
+        # fill dictionary with opponent name and call count
+        for action in self.action_history:
+            if self.player_name == action['playerName']:
+                continue
+            
+            if action['action'] != 'call':
+                continue
+            
+            if action['playerName'] not in opponent_call_count:
+                opponent_call_count[action['playerName']] = 1
+            else:
+                opponent_call_count[action['playerName']] += 1
+        
+        # increment histogram with call counts
+        for value in opponent_call_count.itervalues():
+            if value == 1:
+                opponent_call_count_histogram[0] += 1
+            elif value == 2:
+                opponent_call_count_histogram[1] += 1
+            elif value == 3:
+                opponent_call_count_histogram[2] += 1
+            else:
+                opponent_call_count_histogram[3] += 1
+                
+        return opponent_call_count_histogram
+    
     def _get_num_of_unfolded_opponent(self):
         folded_count = 0
         
@@ -237,7 +395,7 @@ class Record:
             return 0
         
         reward = self.money_won - self.round_bet - self.bet
-        return reward
+        return self._normalize(reward)
         
     def _normalize(self, amount):
         return amount / self.init_chips

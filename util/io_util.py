@@ -8,7 +8,8 @@ class IOUtil(object):
     
     @staticmethod
     def write_file_line_by_line(path, content):
-        print "im supposed to write some lines"
+        for line in content:
+            print line
         #TODO: content is a list
         pass
     

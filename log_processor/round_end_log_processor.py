@@ -18,12 +18,9 @@ class RoundEndLogProcessor(AbstractLogProssor):
         round_end_record = Record()
         round_end_record.set_table_info(table_info)
         
-        ## assign money won for the round to records
-        money_won = self._get_money_won(player_info);
         record_history = RecordWarehouse.pop_records(round_end_record.get_table_id())
-        for record in record_history:
-            player_name = record.get_player_name()
-            record.set_money_won(money_won[player_name])
+        self._assign_money_won(player_info, record_history)
+        self._assign_action_history(record_history)
         
         ## write log from record
         log = []
@@ -34,7 +31,6 @@ class RoundEndLogProcessor(AbstractLogProssor):
         
     def _get_money_won(self, player_info):
         money_won = {}
-        
         for player in player_info:
             player_name = player['playerName']
             winMoney = player['winMoney']
@@ -42,11 +38,15 @@ class RoundEndLogProcessor(AbstractLogProssor):
             
         return money_won
     
-    def _calculate_reward(self, record):
-        money_won = record.get_money_won()
-        round_bet = record.get_round_bet()
-        bet = record.get_bet()
-        
-        reward = money_won - round_bet - bet
-        return reward
+    def _assign_money_won(self, player_info, record_history):
+        money_won = self._get_money_won(player_info);
+        for record in record_history:
+            player_name = record.get_player_name()
+            record.set_money_won(money_won[player_name])
+            
+    def _assign_action_history(self, record_history):
+        action_history = []
+        for record in record_history:
+            action_history.append(record.get_action_info())
+            record.set_action_history(action_history)
         
