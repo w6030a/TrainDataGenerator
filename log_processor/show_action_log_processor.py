@@ -16,6 +16,10 @@ class ShowActionLogProcessor(AbstractLogProssor):
         
         player_name = action_info['playerName']
         
+        for player in player_info:
+            if player_name == player['playerName'] and player['isSurvive'] == False:
+                return
+        
         record = Record()
         record.set_table_info(table_info)
         record.set_action_info(action_info)

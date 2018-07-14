@@ -1,16 +1,16 @@
 class Score(object):
 
     @staticmethod
-    def get_chen_formula_score(self, card1, card2):
+    def get_chen_formula_score(card1, card2):
         score = 0
         
-        card1_value = card1.get_value()
-        card2_value = card2.get_value()
+        card1_rank = card1.get_rank()
+        card2_rank = card2.get_rank()
         
         card1_suit = card1.get_suit()
         card2_suti = card2.get_suit()
         
-        high_value = max(card1_value, card2_value)
+        high_value = max(card1_rank, card2_rank)
         if high_value == 14:
             score += 10
         elif high_value == 13:
@@ -23,7 +23,7 @@ class Score(object):
             score += (high_value/float(2))
         
         # min score for a pair is 5
-        if card1_value == card2_value:
+        if card1_rank == card2_rank:
             score *= 2
             if score < 5:
                 score = 5
@@ -32,7 +32,7 @@ class Score(object):
             score += 2
         
         
-        diff = abs(card1_value - card2_value)
+        diff = abs(card1_rank - card2_rank)
         if diff == 1:
             score += 1
         elif diff == 2:

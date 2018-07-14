@@ -8,10 +8,11 @@ class IOUtil(object):
     
     @staticmethod
     def write_file_line_by_line(path, content):
+        f = open(path, 'a')
         for line in content:
-            print line
-        #TODO: content is a list
-        pass
+            line += "\n"
+            f.write(line)  # python will convert \n to os.linesep
+        f.close() 
     
     @staticmethod
     def read_file(path):

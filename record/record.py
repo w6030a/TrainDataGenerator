@@ -1,4 +1,9 @@
 from __future__ import division
+from card.card import Card
+from card.score import Score
+from holdem import holdem_calc
+from holdem import holdem_argparser
+from util.config import Config
 
 class Record:
 
@@ -29,6 +34,8 @@ class Record:
                 self.folded = player['folded']
                 self.allin = player['allIn']
                 self.cards = player['cards']
+                self.card1 = Card(self.cards[0])
+                self.card2 = Card(self.cards[1])
                 self.is_survive = player['isSurvive']
                 self.reload_count = player['reloadCount']
                 self.round_bet = player['roundBet']
@@ -78,6 +85,7 @@ class Record:
         features.append(self._is_small_blind())
         features.append(self._is_big_blind())
         features.append(self._get_hand_score())
+        features.extend(self._get_set_possibility_and_win_possibility_columns())
         
         ## table info
         features.extend(self._get_round_stage_columns())
@@ -106,7 +114,7 @@ class Record:
         ## reward
         features.append(self._get_reward())
         
-        return features
+        return ', '.join(str(e) for e in features)
     
     ## record owner info
     def _get_chips_in_hand(self):
@@ -151,12 +159,62 @@ class Record:
     def _is_big_blind(self):
         return 1 if self.player_name == self.big_blind['playerName'] else 0
     
-    def _get_hand_socre(self):
-        card_info = self.cards
+    def _get_hand_score(self):
+        return Score.get_chen_formula_score(self.card1, self.card2)
+    
+    def _get_set_possibility_and_win_possibility_columns(self):
+        # holdem_functions.hand_rankings
+        set_possibility_column = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        win_possibility_column = [0]
         
+        if self.stage == 'Deal':
+            pass
+        elif self.stage == 'Turn' or self.stage == 'River' or self.stage == 'Flop':
+            player_cards = []
+            card1 = '{}{}'.format(self.card1.get_value(), self.card1.get_suit().lower())
+            card2 = '{}{}'.format(self.card2.get_value(), self.card2.get_suit().lower())
+            player_cards.append(card1)
+            player_cards.append(card2)
+            
+            if self.stage != 'Flop':
+                player_cards.append('?')
+                player_cards.append('?')
+            
+            community_cards = []
+            board_cards = self.board_card
+            for card in board_cards:
+                temp = ""
+                temp += card[0]
+                temp += card[1].lower()
+                community_cards.append(temp)
+            
+            hole_cards, board = holdem_argparser.parse_cards(player_cards, community_cards)
+            rounds = Config.get_num_of_monte_carlo_rounds()
+            exact = Config.get_exact_holdem_calculation()
+            verbose = Config.get_verbose_holdem_lib()
+            
+            #print 'hole_card=[{}], board=[{}], rounds=[{}], exact=[{}], verbose=[{}],'.format(hole_cards, board, rounds, exact, verbose)
+            win_possibility, set_histogram, winner_list = holdem_calc.run(hole_cards, rounds, exact, board, None, verbose)
+            
+            if self.stage != 'Flop':
+                win_possibility_column[0] = win_possibility[1]
+
+            float_iterations = float(sum(winner_list))
+            # only care about record owner's set histogram
+            for index, occurrence in enumerate(set_histogram[0]):
+                set_possibility_column[index] = occurrence / float_iterations
+            
+        else:
+            raise Exception('unrecognized stage: [{}]'.format(self.stage))  
+        
+        #print "stage={} hand={} board={} win_pos={} set_pos={}".format(self.stage, self.cards, self. board_card, win_possibility_column, set_possibility_column)
+
+        set_possibility_column.extend(win_possibility_column)
+        return set_possibility_column
+    
     ## table info
     def _get_round_stage_columns(self):
-        round_stage_columns = [0, 0, 0, 0, 0]
+        round_stage_columns = [0, 0, 0, 0]
         
         #deal, flop, turn, river
         stage = self.stage
@@ -169,7 +227,7 @@ class Record:
         elif stage == 'River':
             round_stage_columns[3] = 1
         else:
-            raise Exception('unrecognized stage: [{}]'.format(stage))  
+            raise Exception('unrecognized stage: [{}]'.format(stage))
         
         return round_stage_columns
     
