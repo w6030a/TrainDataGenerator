@@ -1,6 +1,6 @@
 # Train Data Generator
  
-    # P.S. all amounts normalized by dividing by init chips (without reload)
+    # P.S. all amounts normalized by dividing by all chips (init chips * reload count * num of players)
     # Total of 55 features
     
 	## record owner info

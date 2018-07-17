@@ -460,4 +460,4 @@ class Record:
         return self._normalize(reward)
         
     def _normalize(self, amount):
-        return amount / self.init_chips
+        return amount / (self.init_chips * self.reload_count * len(self.player_info))
